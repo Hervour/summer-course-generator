@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>自由落体 & 竖直上抛 动态演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", SimHei, sans-serif;
+        }
+        body {
+            background: #f5f7fa;
+            padding: 20px 40px;
+        }
+        h1 {
+            text-align: center;
+            color: #194b97;
+            margin-bottom: 20px;
+            font-size: 32px;
+        }
+        .wrap-row {
+            display: flex;
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .box {
+            flex: 1;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px #ddd;
+        }
+        .box h2 {
+            text-align: center;
+            color: #222;
+            margin-bottom: 12px;
+            font-size: 22px;
+        }
+        canvas {
+            border: 1px solid #999;
+            background: #fefefe;
+            display: block;
+            margin: 0 auto;
+        }
+        .ctrl {
+            text-align: center;
+            margin: 12px 0;
+        }
+        button {
+            padding: 8px 18px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            background: #194b97;
+            color: white;
+            cursor: pointer;
+            margin: 0 6px;
+        }
+        button:hover {
+            opacity: 0.85;
+        }
+        .info {
+            margin-top: 10px;
+            font-size: 17px;
+            line-height: 1.7;
+            color: #333;
+            text-align: center;
+        }
+        .red { color: #d62828; font-weight: bold; }
+        .blue { color: #00509d; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>自由落体运动 / 竖直上抛运动 动态示意图（g=9.8m/s²）</h1>
+    <div class="wrap-row">
+        <!-- 左侧：自由落体 -->
+        <div class="box">
+            <h2>左侧：自由落体（v₀=0）</h2>
+            <canvas id="fallCanvas" width="300" height="480"></canvas>
+            <div class="ctrl">
+                <button id="fallStart">开始下落</button>
+                <button id="fallPause">暂停</button>
+                <button id="fallReset">重置</button>
+            </div>
+            <div class="info" id="fallInfo">
+                t = 0.00 s<br>
+                高度 h = 10.00 m<br>
+                速度 v = 0.00 m/s（向下）
+            </div>
+        </div>
+
+        <!-- 右侧：竖直上抛 -->
+        <div class="box">
+            <h2>右侧：竖直上抛（初速度 v₀=14 m/s）</h2>
+            <canvas id="upCanvas" width="300" height="480"></canvas>
+            <div class="ctrl">
+                <button id="upStart">开始上抛</button>
+                <button id="upPause">暂停</button>
+                <button id="upReset">重置</button>
+            </div>
+            <div class="info" id="upInfo">
+                t = 0.00 s<br>
+                高度 h = 0.00 m<br>
+                速度 v = 14.00 m/s（向上）
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const g = 9.8;
+        const scale = 28; // 像素/米
+
+        // ========== 自由落体模块 ==========
+        const fallCanvas = document.getElementById('fallCanvas');
+        const fallCtx = fallCanvas.getContext('2d');
+        const fallInfo = document.getElementById('fallInfo');
+        let fallAnim = null;
+        let fallT = 0;
+        let fallPaused = false;
+        const fallH0 = 10; // 初始高度10m
+
+        function drawFallBase() {
+            fallCtx.clearRect(0,0,fallCanvas.width,fallCanvas.height);
+            // 地面
+            fallCtx.fillStyle = '#777';
+            fallCtx.fillRect(20, 420, 260, 4);
+            fallCtx.fillText("地面", 230, 438);
+            // 刻度
+            fallCtx.strokeStyle="#999";
+            fallCtx.font="13px SimHei";
+            for(let i=0;i<=10;i++){
+                let y = 420 - i * scale;
+                fallCtx.beginPath();
+                fallCtx.moveTo(20,y);
+                fallCtx.lineTo(30,y);
+                fallCtx.stroke();
+                fallCtx.fillText(i+"m", 5, y+4);
+            }
+        }
+        function resetFall() {
+            cancelAnimationFrame(fallAnim);
+            fallAnim = null;
+            fallPaused = false;
+            fallT = 0;
+            drawFallBase();
+            drawFallBall(fallH0);
+            fallInfo.innerHTML = `t = 0.00 s<br>高度 h = 10.00 m<br>速度 v = 0.00 m/s（向下）`;
+        }
+        function drawFallBall(h) {
+            drawFallBase();
+            const yPix = 420 - h * scale;
+            fallCtx.fillStyle="#d62828";
+            fallCtx.beginPath();
+            fallCtx.arc(150, yPix, 10, 0, Math.PI*2);
+            fallCtx.fill();
+        }
+        function runFall() {
+            if(fallAnim && !fallPaused) return;
+            fallPaused = false;
+            function anim() {
+                if(fallPaused) return;
+                fallT += 0.03;
+                // 自由落体公式 h = h0 - ½ g t²
+                let h = fallH0 - 0.5 * g * fallT * fallT;
+                let v = g * fallT;
+                if(h <= 0) h = 0;
+                drawFallBall(h);
+                fallInfo.innerHTML = `t = ${fallT.toFixed(2)} s<br>高度 h = ${h.toFixed(2)} m<br>速度 v = <span class="red">${v.toFixed(2)}</span> m/s（向下）`;
+                if(h > 0) fallAnim = requestAnimationFrame(anim);
+                else fallAnim = null;
+            }
+            anim();
+        }
+        function pauseFall(){
+            fallPaused = !fallPaused;
+            if(!fallPaused && fallAnim !== null){
+                runFall();
+            }
+        }
+        document.getElementById('fallStart').onclick = runFall;
+        document.getElementById('fallPause').onclick = pauseFall;
+        document.getElementById('fallReset').onclick = resetFall;
+
+        // ========== 竖直上抛模块 ==========
+        const upCanvas = document.getElementById('upCanvas');
+        const upCtx = upCanvas.getContext('2d');
+        const upInfo = document.getElementById('upInfo');
+        let upAnim = null;
+        let upT = 0;
+        let upPaused = false;
+        const v0 = 14;
+
+        function drawUpBase() {
+            upCtx.clearRect(0,0,upCanvas.width,upCanvas.height);
+            upCtx.fillStyle = '#777';
+            upCtx.fillRect(20, 420, 260, 4);
+            upCtx.fillText("抛出点地面", 210, 438);
+            upCtx.strokeStyle="#999";
+            upCtx.font="13px SimHei";
+            for(let i=0;i<=10;i++){
+                let y = 420 - i * scale;
+                upCtx.beginPath();
+                upCtx.moveTo(20,y);
+                upCtx.lineTo(30,y);
+                upCtx.stroke();
+                upCtx.fillText(i+"m", 5, y+4);
+            }
+        }
+        function resetUp() {
+            cancelAnimationFrame(upAnim);
+            upAnim = null;
+            upPaused = false;
+            upT = 0;
+            drawUpBase();
+            drawUpBall(0);
+            upInfo.innerHTML = `t = 0.00 s<br>高度 h = 0.00 m<br>速度 v = 14.00 m/s（向上）`;
+        }
+        function drawUpBall(h) {
+            drawUpBase();
+            const yPix = 420 - h * scale;
+            upCtx.fillStyle="#00509d";
+            upCtx.beginPath();
+            upCtx.arc(150, yPix, 10, 0, Math.PI*2);
+            upCtx.fill();
+        }
+        function runUp() {
+            if(upAnim && !upPaused) return;
+            upPaused = false;
+            function anim() {
+                if(upPaused) return;
+                upT += 0.03;
+                // 上抛位移 h = v0 t - ½ g t²
+                let h = v0 * upT - 0.5 * g * upT * upT;
+                let v = v0 - g * upT;
+                if(h <= 0) h = 0;
+                drawUpBall(h);
+                let dir = v >= 0 ? "向上" : "向下";
+                upInfo.innerHTML = `t = ${upT.toFixed(2)} s<br>高度 h = ${h.toFixed(2)} m<br>速度 v = <span class="blue">${Math.abs(v).toFixed(2)}</span> m/s（${dir}）`;
+                if(h > 0) upAnim = requestAnimationFrame(anim);
+                else upAnim = null;
+            }
+            anim();
+        }
+        function pauseUp(){
+            upPaused = !upPaused;
+            if(!upPaused && upAnim !== null){
+                runUp();
+            }
+        }
+        document.getElementById('upStart').onclick = runUp;
+        document.getElementById('upPause').onclick = pauseUp;
+        document.getElementById('upReset').onclick = resetUp;
+
+        window.onload = ()=>{
+            resetFall();
+            resetUp();
+        }
+    </script>
+</body>
+</html>

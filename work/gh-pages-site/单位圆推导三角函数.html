@@ -1,0 +1,237 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>单位圆推导三角函数</title>
+<style>
+  body { font-family: "Microsoft YaHei", "SimHei", sans-serif; margin: 20px; background: #fafafa; color: #222; }
+  h2 { margin: 0 0 6px; }
+  .sub { color: #666; margin: 0 0 14px; font-size: 14px; }
+  .wrap { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+  svg { background: #fff; border: 1px solid #ddd; border-radius: 8px; }
+  .panel { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 14px 18px; min-width: 250px; }
+  .panel label.row { display: block; margin: 7px 0; }
+  .val { font-weight: bold; }
+  .sin { color: #d64541; } .cos { color: #2e6fb7; } .tan { color: #2e8b57; } .arc { color: #8e44ad; }
+  .note { margin-top: 12px; padding: 10px; background: #f3f6fb; border-radius: 6px; font-size: 14px; line-height: 1.7; }
+  input[type=range] { width: 210px; }
+  button { margin-top: 8px; padding: 6px 14px; border: none; border-radius: 6px; background: #2e6fb7; color: #fff; cursor: pointer; font-size: 14px; }
+  button.off { background: #999; }
+</style>
+</head>
+<body>
+<h2>单位圆怎么推出三角函数</h2>
+<p class="sub">拖动滑块或点自动旋转：看 P 在 x 轴、y 轴上的投影，再把 sin、cos 的值搬到右边的图像上，两条曲线就画出来了。</p>
+
+<div class="wrap">
+  <svg id="svg" width="980" height="620" viewBox="0 0 980 620"></svg>
+
+  <div class="panel">
+    <label class="row">角度 α：<input type="range" id="angle" min="0" max="360" value="45" step="1"></label>
+    <div class="row">角度：<span class="val" id="deg"></span>°　弧度：<span class="val" id="rad"></span></div>
+    <div class="row">sin α = <span class="val sin" id="sinv"></span>　<span class="val" id="quad"></span></div>
+    <div class="row">cos α = <span class="val cos" id="cosv"></span></div>
+    <div class="row">tan α = <span class="val tan" id="tanv"></span></div>
+
+    <label class="row"><input type="checkbox" id="sProj" checked> 投影（P 到 x 轴 / y 轴）</label>
+    <label class="row"><input type="checkbox" id="sGraph" checked> 函数图像（sin / cos）</label>
+    <label class="row"><input type="checkbox" id="sSin" checked> sin（红色竖线段）</label>
+    <label class="row"><input type="checkbox" id="sCos" checked> cos（蓝色横线段）</label>
+    <label class="row"><input type="checkbox" id="sTan" checked> tan（绿色切线）</label>
+    <label class="row"><input type="checkbox" id="sArc" checked> 弧（弧长 = 弧度数）</label>
+    <button id="auto">自动旋转</button>
+
+    <div class="note">
+      <b>推导要点：</b>P 在单位圆上，横坐标 x 就是 cos α，纵坐标 y 就是 sin α（直角边 / 斜边，斜边 = 1）。<br>
+      把 P 竖直投影到 x 轴、水平投影到 y 轴，两个投影点就分别量出了 cos α 和 sin α。<br>
+      角每转一点，投影值跟着变，把 (角度, sin) 和 (角度, cos) 一个个点连起来，就是 sin x 和 cos x 的图像。<br>
+      勾股关系：<b>sin²α + cos²α = 1</b>。
+    </div>
+  </div>
+</div>
+
+<script>
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById("svg");
+
+  // 布局
+  const CX = 180, CY = 210, R = 120;            // 左：单位圆
+  const PX0 = 360, PX1 = 940;                    // 右：图像 x 范围（0°→360°）
+  const SIN_CY = 210, COS_CY = 440, AMP = 120;   // 图像幅度 120px
+
+  function el(name, attrs) {
+    const e = document.createElementNS(SVG_NS, name);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function text(x, y, s, attrs) {
+    const t = el("text", Object.assign({ x: x, y: y, "font-size": 14, fill: "#333" }, attrs || {}));
+    t.textContent = s;
+    return t;
+  }
+  function angleToX(deg) { return PX0 + (deg / 360) * (PX1 - PX0); }
+  function pathOf(curveFn, fromDeg, toDeg) {
+    let d = "";
+    for (let deg = fromDeg; deg <= toDeg; deg += 2) {
+      const x = angleToX(deg), y = curveFn(deg);
+      d += (d ? " L " : "M ") + x.toFixed(1) + " " + y.toFixed(1);
+    }
+    return d;
+  }
+  const sinY = deg => SIN_CY - AMP * Math.sin(deg * Math.PI / 180);
+  const cosY = deg => COS_CY - AMP * Math.cos(deg * Math.PI / 180);
+
+  function drawBase() {
+    svg.innerHTML = "";
+    // 左：单位圆
+    svg.appendChild(el("circle", { cx: CX, cy: CY, r: R, fill: "none", stroke: "#bbb", "stroke-width": 2 }));
+    svg.appendChild(el("line", { x1: 30, y1: CY, x2: 320, y2: CY, stroke: "#999", "stroke-width": 1.5 }));
+    svg.appendChild(el("line", { x1: CX, y1: 60, x2: CX, y2: 360, stroke: "#999", "stroke-width": 1.5 }));
+    svg.appendChild(text(CX - 16, CY + 18, "O", { fill: "#666" }));
+    svg.appendChild(text(CX + R - 26, CY - 8, "1", { fill: "#999", "font-size": 12 }));
+    svg.appendChild(text(CX - 34, CY - R + 16, "1", { fill: "#999", "font-size": 12 }));
+
+    // 右：图像背景完整曲线（淡）
+    svg.appendChild(el("path", { d: pathOf(sinY, 0, 360), fill: "none", stroke: "#d64541", "stroke-width": 1.5, opacity: 0.25 }));
+    svg.appendChild(el("path", { d: pathOf(cosY, 0, 360), fill: "none", stroke: "#2e6fb7", "stroke-width": 1.5, opacity: 0.25 }));
+    // 图像坐标轴
+    svg.appendChild(el("line", { x1: PX0 - 20, y1: SIN_CY, x2: PX1 + 20, y2: SIN_CY, stroke: "#bbb", "stroke-width": 1.2 }));
+    svg.appendChild(el("line", { x1: PX0 - 20, y1: COS_CY, x2: PX1 + 20, y2: COS_CY, stroke: "#bbb", "stroke-width": 1.2 }));
+    svg.appendChild(text(PX0 - 14, SIN_CY - 8, "y=sin x", { fill: "#d64541", "font-weight": "bold" }));
+    svg.appendChild(text(PX0 - 14, COS_CY - 8, "y=cos x", { fill: "#2e6fb7", "font-weight": "bold" }));
+    // 刻度
+    [0, 90, 180, 270, 360].forEach(deg => {
+      const x = angleToX(deg);
+      svg.appendChild(el("line", { x1: x, y1: SIN_CY - 5, x2: x, y2: SIN_CY + 5, stroke: "#999", "stroke-width": 1 }));
+      svg.appendChild(text(x - 12, SIN_CY + 18, deg + "°", { fill: "#999", "font-size": 11 }));
+    });
+    [[SIN_CY - AMP, "1"], [SIN_CY, "0"], [SIN_CY + AMP, "-1"]].forEach(([y, s]) => svg.appendChild(text(PX0 - 30, y + 4, s, { fill: "#999", "font-size": 11 })));
+    [[COS_CY - AMP, "1"], [COS_CY, "0"], [COS_CY + AMP, "-1"]].forEach(([y, s]) => svg.appendChild(text(PX0 - 30, y + 4, s, { fill: "#999", "font-size": 11 })));
+  }
+
+  function draw(angleDeg) {
+    drawBase();
+    const rad = angleDeg * Math.PI / 180;
+    const px = CX + R * Math.cos(rad), py = CY - R * Math.sin(rad);
+    const showSin = document.getElementById("sSin").checked;
+    const showCos = document.getElementById("sCos").checked;
+    const showTan = document.getElementById("sTan").checked;
+    const showArc = document.getElementById("sArc").checked;
+    const showProj = document.getElementById("sProj").checked;
+    const showGraph = document.getElementById("sGraph").checked;
+
+    // 半径 + 直角三角形
+    svg.appendChild(el("line", { x1: CX, y1: CY, x2: px, y2: py, stroke: "#333", "stroke-width": 2 }));
+    svg.appendChild(el("polygon", { points: `${CX},${CY} ${px},${CY} ${px},${py}`, fill: "#eef2fa", stroke: "none" }));
+    const s = 12, dirX = px >= CX ? -1 : 1;
+    svg.appendChild(el("polyline", { points: `${px},${CY + s} ${px + s * dirX},${CY + s} ${px + s * dirX},${CY}`, fill: "none", stroke: "#888", "stroke-width": 1 }));
+
+    // cos 线段（蓝色横）
+    if (showCos) {
+      svg.appendChild(el("line", { x1: CX, y1: CY, x2: px, y2: CY, stroke: "#2e6fb7", "stroke-width": 5 }));
+      svg.appendChild(text((CX + px) / 2 - 8, CY + 22, "cos α", { fill: "#2e6fb7", "font-weight": "bold", "font-size": 16 }));
+    }
+    // sin 线段（红色竖）
+    if (showSin) {
+      svg.appendChild(el("line", { x1: px, y1: CY, x2: px, y2: py, stroke: "#d64541", "stroke-width": 5 }));
+      svg.appendChild(text(px + (px >= CX ? 8 : -52), (CY + py) / 2 + 5, "sin α", { fill: "#d64541", "font-weight": "bold", "font-size": 16 }));
+    }
+
+    // 投影（新）：P 到 y 轴（量 sin），P 到 x 轴（量 cos）
+    if (showProj) {
+      svg.appendChild(el("line", { x1: px, y1: py, x2: CX, y2: py, stroke: "#d64541", "stroke-width": 1.5, "stroke-dasharray": "5 4", opacity: 0.7 }));
+      svg.appendChild(el("line", { x1: px, y1: py, x2: px, y2: CY, stroke: "#2e6fb7", "stroke-width": 1.5, "stroke-dasharray": "5 4", opacity: 0.7 }));
+      svg.appendChild(el("circle", { cx: CX, cy: py, r: 5, fill: "#d64541", stroke: "#fff", "stroke-width": 1.5 }));
+      svg.appendChild(el("circle", { cx: px, cy: CY, r: 5, fill: "#2e6fb7", stroke: "#fff", "stroke-width": 1.5 }));
+      svg.appendChild(text(CX + 8, py - 8, "sin 投影", { fill: "#d64541", "font-size": 12 }));
+      svg.appendChild(text(px + 8, CY + 20, "cos 投影", { fill: "#2e6fb7", "font-size": 12 }));
+    }
+
+    // tan 线段
+    if (showTan && Math.abs(Math.cos(rad)) > 1e-6) {
+      const k = 1 / Math.cos(rad);
+      const tx = CX + R, ty = CY - R * Math.sin(rad) * k;
+      svg.appendChild(el("line", { x1: tx, y1: CY, x2: tx, y2: ty, stroke: "#2e8b57", "stroke-width": 5 }));
+      svg.appendChild(el("line", { x1: tx, y1: 60, x2: tx, y2: 360, stroke: "#cfe6d8", "stroke-width": 1, "stroke-dasharray": "4 4" }));
+      svg.appendChild(text(tx + 8, (CY + ty) / 2, "tan α", { fill: "#2e8b57", "font-weight": "bold", "font-size": 16 }));
+    }
+
+    // 弧
+    if (showArc) {
+      const large = rad > Math.PI ? 1 : 0;
+      svg.appendChild(el("path", { d: `M ${CX + R} ${CY} A ${R} ${R} 0 ${large} 0 ${px} ${py}`, fill: "none", stroke: "#8e44ad", "stroke-width": 4 }));
+      const mid = rad / 2;
+      svg.appendChild(text(CX + (R + 22) * Math.cos(mid) - 6, CY - (R + 22) * Math.sin(mid) + 6, "α", { fill: "#8e44ad", "font-weight": "bold", "font-size": 17 }));
+    }
+
+    // 点 P
+    svg.appendChild(el("circle", { cx: px, cy: py, r: 6, fill: "#d64541", stroke: "#fff", "stroke-width": 2 }));
+    svg.appendChild(text(px + 10, py - 10, `P(${Math.cos(rad).toFixed(2)}, ${Math.sin(rad).toFixed(2)})`, { "font-size": 13 }));
+
+    // 右边图像
+    if (showGraph) {
+      const xCur = angleToX(angleDeg);
+      // 竖线（当前角位置）
+      svg.appendChild(el("line", { x1: xCur, y1: SIN_CY - AMP - 14, x2: xCur, y2: SIN_CY + AMP + 14, stroke: "#999", "stroke-width": 1, "stroke-dasharray": "4 4" }));
+      svg.appendChild(el("line", { x1: xCur, y1: COS_CY - AMP - 14, x2: xCur, y2: COS_CY + AMP + 14, stroke: "#999", "stroke-width": 1, "stroke-dasharray": "4 4" }));
+      // 已画出的曲线（从 0° 到当前角）
+      if (angleDeg > 0) {
+        svg.appendChild(el("path", { d: pathOf(sinY, 0, angleDeg), fill: "none", stroke: "#d64541", "stroke-width": 3 }));
+        svg.appendChild(el("path", { d: pathOf(cosY, 0, angleDeg), fill: "none", stroke: "#2e6fb7", "stroke-width": 3 }));
+      }
+      // 当前值横线（把圆上的投影值搬过来）
+      const sy = sinY(angleDeg), cyy = cosY(angleDeg);
+      svg.appendChild(el("line", { x1: CX, y1: sy, x2: xCur, y2: sy, stroke: "#d64541", "stroke-width": 1.2, "stroke-dasharray": "5 4", opacity: 0.75 }));
+      svg.appendChild(el("line", { x1: PX0 - 20, y1: cyy, x2: xCur, y2: cyy, stroke: "#2e6fb7", "stroke-width": 1.2, "stroke-dasharray": "5 4", opacity: 0.75 }));
+      // 曲线上的点
+      svg.appendChild(el("circle", { cx: xCur, cy: sy, r: 5, fill: "#d64541", stroke: "#fff", "stroke-width": 1.5 }));
+      svg.appendChild(el("circle", { cx: xCur, cy: cyy, r: 5, fill: "#2e6fb7", stroke: "#fff", "stroke-width": 1.5 }));
+      svg.appendChild(text(xCur - 44, sy - 10, "sin " + angleDeg + "°", { fill: "#d64541", "font-size": 12 }));
+      svg.appendChild(text(xCur - 44, cyy + 18, "cos " + angleDeg + "°", { fill: "#2e6fb7", "font-size": 12 }));
+    }
+
+    // 数值
+    const sinV = Math.sin(rad), cosV = Math.cos(rad);
+    document.getElementById("deg").textContent = angleDeg;
+    document.getElementById("rad").textContent = rad.toFixed(2);
+    document.getElementById("sinv").textContent = sinV.toFixed(3);
+    document.getElementById("cosv").textContent = cosV.toFixed(3);
+    document.getElementById("tanv").textContent = Math.abs(cosV) < 1e-6 ? "不存在" : (sinV / cosV).toFixed(3);
+    let quad = "—";
+    const a = ((angleDeg % 360) + 360) % 360;
+    if (a === 0 || a === 360) quad = "正 x 轴";
+    else if (a === 90) quad = "正 y 轴";
+    else if (a === 180) quad = "负 x 轴";
+    else if (a === 270) quad = "负 y 轴";
+    else if (a < 90) quad = "第一象限";
+    else if (a < 180) quad = "第二象限";
+    else if (a < 270) quad = "第三象限";
+    else quad = "第四象限";
+    document.getElementById("quad").textContent = quad;
+  }
+
+  const slider = document.getElementById("angle");
+  slider.addEventListener("input", () => draw(parseFloat(slider.value)));
+  ["sProj", "sGraph", "sSin", "sCos", "sTan", "sArc"].forEach(id =>
+    document.getElementById(id).addEventListener("change", () => draw(parseFloat(slider.value))));
+
+  const btn = document.getElementById("auto");
+  let timer = null;
+  btn.addEventListener("click", () => {
+    if (timer) { clearInterval(timer); timer = null; btn.textContent = "自动旋转"; btn.classList.remove("off"); }
+    else {
+      timer = setInterval(() => {
+        let v = parseFloat(slider.value) + 2;
+        if (v >= 360) v = v - 360;
+        slider.value = v;
+        draw(v);
+      }, 40);
+      btn.textContent = "停止"; btn.classList.add("off");
+    }
+  });
+
+  draw(45);
+</script>
+</body>
+</html>

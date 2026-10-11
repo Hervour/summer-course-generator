@@ -1,0 +1,129 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>暑期课程 · 互动演示导航</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+    background: linear-gradient(160deg, #eef2ff 0%, #f8fafc 60%, #eef6ff 100%);
+    min-height: 100vh;
+    padding: 40px 20px 60px;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 36px; }
+  header h1 {
+    font-size: 30px; color: #1e3a8a; letter-spacing: 1px;
+  }
+  header p {
+    margin-top: 10px; color: #64748b; font-size: 15px; line-height: 1.7;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+  }
+  .card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 22px 20px 18px;
+    box-shadow: 0 2px 10px rgba(30, 58, 138, 0.08);
+    border: 1px solid #e2e8f0;
+    transition: transform .15s ease, box-shadow .15s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 22px rgba(30, 58, 138, 0.14);
+  }
+  .card .icon { font-size: 34px; margin-bottom: 10px; }
+  .card h2 { font-size: 18px; color: #0f172a; margin-bottom: 6px; }
+  .card .tag {
+    display: inline-block; font-size: 12px; color: #1d4ed8;
+    background: #dbeafe; border-radius: 999px; padding: 2px 10px;
+    margin-bottom: 10px; align-self: flex-start;
+  }
+  .card p { font-size: 14px; color: #475569; line-height: 1.6; flex: 1; }
+  .card a {
+    display: block; margin-top: 14px; text-align: center;
+    background: #2563eb; color: #fff; text-decoration: none;
+    border-radius: 8px; padding: 9px 0; font-size: 14px; font-weight: 600;
+    transition: background .15s ease;
+  }
+  .card a:hover { background: #1d4ed8; }
+  footer {
+    margin-top: 40px; text-align: center; color: #94a3b8; font-size: 13px; line-height: 1.8;
+  }
+  @media (max-width: 640px) {
+    header h1 { font-size: 24px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📚 暑期课程 · 互动演示导航</h1>
+    <p>数学和物理课上的互动小工具，点卡片就能打开。</p>
+  </header>
+
+  <div class="grid">
+
+    <div class="card">
+      <div class="icon">⭕</div>
+      <h2>单位圆推导三角函数</h2>
+      <span class="tag">数学 · DAY14</span>
+      <p>拖动滑块让角转一圈，看 sin、cos、tan 分别是哪条线段，还能直接看到 sinx、cosx 的函数图像是怎么描出来的。</p>
+      <a href="./单位圆推导三角函数.html">打开演示 →</a>
+    </div>
+
+    <div class="card">
+      <div class="icon">🫧</div>
+      <h2>集合的文氏图</h2>
+      <span class="tag">数学 · DAY9</span>
+      <p>集合的交集、并集、补集画出来长什么样，看文氏图一眼就懂，比干记符号快多了。</p>
+      <a href="./venn图.html">打开演示 →</a>
+    </div>
+
+    <div class="card">
+      <div class="icon">↗️</div>
+      <h2>力的合成与分解</h2>
+      <span class="tag">物理 · DAY4</span>
+      <p>平行四边形定则的可视化：两个力怎么合成，一个力怎么分解，夹角变了结果怎么变，拖一拖就明白了。</p>
+      <a href="./力的合成与分解.html">打开演示 →</a>
+    </div>
+
+    <div class="card">
+      <div class="icon">📏</div>
+      <h2>路程与位移</h2>
+      <span class="tag">物理 · DAY1</span>
+      <p>走同一条路，路程和位移有什么区别？一个看轨迹长度，一个只看起点到终点，画出来对比最直观。</p>
+      <a href="./路程与位移.html">打开演示 →</a>
+    </div>
+
+    <div class="card">
+      <div class="icon">🧪</div>
+      <h2>打点计时器：求加速度</h2>
+      <span class="tag">物理 · DAY1</span>
+      <p>逐差法求加速度的完整流程，纸带上的点、时间间隔、位移差怎么处理，一步步算给你看。</p>
+      <a href="./求加速度实验.html">打开演示 →</a>
+    </div>
+
+    <div class="card">
+      <div class="icon">🪂</div>
+      <h2>自由落体和竖直上抛</h2>
+      <span class="tag">物理 · DAY3</span>
+      <p>自由落体越掉越快，竖直上抛先升后降，速度和位移随时间怎么变，图像配着公式一起看。</p>
+      <a href="./自由落体和竖直上抛.html">打开演示 →</a>
+    </div>
+
+  </div>
+
+
+</div>
+</body>
+</html>
+

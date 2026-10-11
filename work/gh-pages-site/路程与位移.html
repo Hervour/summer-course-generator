@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>位移与路程 课堂辨析</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            background: #f8f9fa;
+            padding: 20px 40px;
+        }
+        h1 {
+            text-align: center;
+            color: #224488;
+            margin: 20px 0;
+            font-size: 36px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .row {
+            display: flex;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        /* 表格区域 */
+        .table-box {
+            flex: 1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            box-shadow: 0 2px 10px #ddd;
+        }
+        th, td {
+            border: 1px solid #999;
+            padding: 14px;
+            font-size: 18px;
+            text-align: center;
+        }
+        th {
+            background-color: #224488;
+            color: white;
+        }
+        .dis-th {
+            background: #2980b9;
+        }
+        .path-th {
+            background: #c0392b;
+        }
+        /* 动画画布 */
+        .animate-box {
+            flex: 1;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 2px 10px #ddd;
+            border-radius: 8px;
+        }
+        canvas {
+            border: 2px solid #666;
+            background: #fefefe;
+            display: block;
+            margin: 0 auto;
+        }
+        .btn-group {
+            text-align: center;
+            margin-top: 15px;
+        }
+        button {
+            padding: 8px 20px;
+            font-size: 16px;
+            margin: 0 8px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background: #224488;
+            color: white;
+        }
+        button:hover {
+            opacity: 0.85;
+        }
+        /* 知识点总结 */
+        .summary {
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px #ddd;
+            font-size: 19px;
+            line-height: 1.8;
+        }
+        .summary h3 {
+            color: #224488;
+            margin-bottom: 12px;
+            font-size: 24px;
+        }
+        .blue {color:#2980b9; font-weight:bold}
+        .red {color:#c0392b; font-weight:bold}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>位移 & 路程 概念辨析（高中物理）</h1>
+
+        <div class="row">
+            <!-- 对比表格 -->
+            <div class="table-box">
+                <table>
+                    <tr>
+                        <th>对比项目</th>
+                        <th class="dis-th">位移（Δx）</th>
+                        <th class="path-th">路程（s）</th>
+                    </tr>
+                    <tr>
+                        <td>物理定义</td>
+                        <td>从<strong>初位置指向末位置</strong>的有向线段</td>
+                        <td>物体实际运动<strong>轨迹的实际长度</strong></td>
+                    </tr>
+                    <tr>
+                        <td>物理量属性</td>
+                        <td>矢量（既有大小、又有方向）</td>
+                        <td>标量（只有大小、没有方向）</td>
+                    </tr>
+                    <tr>
+                        <td>大小取值</td>
+                        <td>初末位置直线距离；可为0</td>
+                        <td>轨迹总长，永远 ≥ 0</td>
+                    </tr>
+                    <tr>
+                        <td>运算法则</td>
+                        <td>平行四边形定则（矢量合成）</td>
+                        <td>代数加减（直接数字相加）</td>
+                    </tr>
+                    <tr>
+                        <td>运动往返</td>
+                        <td>回到起点 → 位移=0</td>
+                        <td>往返运动路程持续累加</td>
+                    </tr>
+                    <tr>
+                        <td>直线单向运动</td>
+                        <td>大小 = 路程</td>
+                        <td>轨迹长度等于位移数值</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- 动画演示画布 -->
+            <div class="animate-box">
+                <canvas id="canvas" width="550" height="320"></canvas>
+                <div class="btn-group">
+                    <button onclick="runLine()">直线往返演示</button>
+                    <button onclick="runCurve()">曲线运动演示</button>
+                    <button onclick="resetAll()">重置画布</button>
+                </div>
+                <p style="text-align:center;margin-top:10px;font-size:17px">
+                    <span class="blue">蓝色线段 = 位移</span> &nbsp;&nbsp;
+                    <span class="red">红色轨迹 = 路程</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- 易错点总结 -->
+        <div class="summary">
+            <h3>核心易错考点总结</h3>
+            1. 只有<strong>单向直线运动</strong>时，位移大小才等于路程；其余所有运动位移大小一定＜路程。<br>
+            2. 物体绕行一周回到出发点：<span class="blue">位移 = 0</span>，<span class="red">路程 = 周长</span>。<br>
+            3. 位移描述“位置变化”，只关心起点终点；路程描述“运动痕迹”，跟着实际路径走。<br>
+            4. 矢量书写：位移必须带方向（正负号代表直线方向），路程只用纯数值计算。
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let animationId = null;
+
+        // 清空画布
+        function resetAll() {
+            cancelAnimationFrame(animationId);
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            drawAxis();
+        }
+
+        // 绘制坐标轴基准线
+        function drawAxis() {
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 1;
+            // 横轴
+            ctx.beginPath();
+            ctx.moveTo(30, 160);
+            ctx.lineTo(520, 160);
+            ctx.stroke();
+            ctx.fillText("x", 525, 163);
+        }
+
+        // 直线往返运动
+        function runLine(){
+            resetAll();
+            const startX = 50;
+            const endX = 480;
+            const y = 160;
+            let x = startX;
+            let dir = 1;
+            const speed = 2;
+            // 存储运动轨迹点
+            let pathPoints = [];
+
+            function animate(){
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                drawAxis();
+                x += speed * dir;
+                pathPoints.push({x, y});
+
+                // 折返判定
+                if(x >= endX) dir = -1;
+                if(x <= startX) dir = 1;
+
+                // 绘制路程（红色轨迹线）
+                ctx.strokeStyle = '#c0392b';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                pathPoints.forEach((p,i)=>{
+                    if(i===0) ctx.moveTo(p.x,p.y);
+                    else ctx.lineTo(p.x,p.y);
+                })
+                ctx.stroke();
+
+                // 绘制位移（蓝色实线：起点→当前位置）
+                ctx.strokeStyle = '#2980b9';
+                ctx.setLineDash([8,4]);
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(startX, y);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 小球
+                ctx.fillStyle = '#222';
+                ctx.beginPath();
+                ctx.arc(x, y, 8, 0, Math.PI*2);
+                ctx.fill();
+
+                animationId = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // 曲线圆周运动
+        function runCurve(){
+            resetAll();
+            const cx = 275;
+            const cy = 160;
+            const r = 100;
+            let angle = 0;
+            let pathArr = [];
+            const radSpeed = 0.02;
+
+            function animate(){
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                drawAxis();
+                angle += radSpeed;
+                const px = cx + r * Math.cos(angle);
+                const py = cy + r * Math.sin(angle);
+                pathArr.push({x:px, y:py});
+
+                // 路程：红色轨迹
+                ctx.strokeStyle = '#c0392b';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                pathArr.forEach((p,i)=>{
+                    i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y);
+                })
+                ctx.stroke();
+
+                // 位移：蓝色虚线 圆心(起点)→小球
+                ctx.strokeStyle = '#2980b9';
+                ctx.setLineDash([8,4]);
+                ctx.lineWidth =3;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(px, py);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 运动小球
+                ctx.fillStyle = '#222';
+                ctx.beginPath();
+                ctx.arc(px, py, 8, 0, Math.PI*2);
+                ctx.fill();
+
+                animationId = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // 页面加载默认画坐标轴
+        window.onload = drawAxis;
+    </script>
+</body>
+</html>

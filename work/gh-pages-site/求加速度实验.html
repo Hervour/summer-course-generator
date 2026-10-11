@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>50Hz打点计时器 匀变速测加速度</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", SimHei, sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            padding: 24px 40px;
+        }
+        h1 {
+            text-align: center;
+            color: #194b97;
+            margin-bottom: 24px;
+            font-size: 34px;
+        }
+        .control-bar {
+            background: #fff;
+            padding: 18px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px #ddd;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 24px;
+            font-size: 17px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #194b97;
+            color: white;
+        }
+        button:hover {
+            opacity: 0.85;
+        }
+        .info-text {
+            color: #444;
+            font-size: 17px;
+        }
+        .paper-box {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px #ddd;
+            margin-bottom: 20px;
+        }
+        #paperCanvas {
+            border: 1px solid #999;
+            background-color: #fdfdfd;
+            display: block;
+            margin: 0 auto;
+        }
+        .calc-area {
+            background: #fff;
+            padding: 22px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px #ddd;
+            font-size: 18px;
+            line-height: 1.8;
+        }
+        .calc-area h3 {
+            color: #194b97;
+            margin-bottom: 12px;
+            font-size: 23px;
+        }
+        .red-text {
+            color: #d62828;
+            font-weight: bold;
+        }
+        .blue-text {
+            color: #00509d;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div style="max-width:1300px;margin:0 auto;">
+        <h1>50Hz 打点计时器（仅匀加速 · 逐差法求加速度）</h1>
+        <div class="control-bar">
+            <button id="genBtn">生成纸带</button>
+            <button id="clearBtn">清空画布</button>
+            <span class="info-text">打点频率50Hz → 单点周期 T₀=0.02s | 每5个点取计数点，计数点时间间隔 T = 0.1s</span>
+        </div>
+
+        <div class="paper-box">
+            <canvas id="paperCanvas" width="1150" height="240"></canvas>
+        </div>
+
+        <div class="calc-area">
+            <h3>实验数据 & 加速度计算（逐差法）</h3>
+            <div id="resultBox">点击【生成纸带】生成带随机误差的真实纸带数据</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('paperCanvas');
+        const ctx = canvas.getContext('2d');
+        const resultBox = document.getElementById('resultBox');
+        const dotPeriod = 0.02;    // 单点时间 50Hz
+        const countPeriod = 0.1;    // 5个点一个计数点 0.02*5
+        const baseY = 120;
+        const dotR = 5;
+        // 比例尺缩放系数：原图1mm对应画布1px，现在放大10倍绘制，点间距拉开十倍，画面宽松
+        const scale = 9;
+
+        // 清空画布
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawCenterLine();
+            resultBox.innerHTML = "点击【生成纸带】生成带随机误差的真实纸带数据";
+        }
+        // 绘制纸带中心线
+        function drawCenterLine() {
+            ctx.strokeStyle = '#777';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(30, baseY);
+            ctx.lineTo(1120, baseY);
+            ctx.stroke();
+        }
+
+        // 生成纸带数据（带微小随机误差，贴合真实实验）
+        function generatePaperData() {
+            // 基础位移差 标准Δx
+            const baseDelta = 4.0;
+            // 第一段计数距离基础值
+            let x1Base = 12;
+            // 6个计数段 x1~x6，单位 mm
+            const countDis = [];
+            for (let i = 0; i < 6; i++) {
+                // 叠加固定差值 + 正负随机噪声 ±0.3mm 模拟实验误差
+                const noise = (Math.random() * 0.6) - 0.3;
+                const val = x1Base + i * baseDelta + noise;
+                countDis.push(Number(val.toFixed(2)));
+            }
+
+            // 拆分：每个计数点内部包含5个打点，生成每一小段打点间距
+            const allDotsX = [50]; // 第一个打点坐标
+            for (let dis of countDis) {
+                // 将一个计数段总长度平分给5个打点间隔 + 微小抖动
+                const segLen = dis / 5;
+                for (let i = 0; i < 5; i++) {
+                    const tinyNoise = (Math.random() * 0.2) - 0.1;
+                    const step = (segLen + tinyNoise) * scale; // 绘图距离放大10倍
+                    allDotsX.push(allDotsX[allDotsX.length - 1] + step);
+                }
+            }
+            return { countDis, allDotsX };
+        }
+
+        // 绘制所有打点 + 标记计数点 + 标注计数段长度
+        function drawPaper() {
+            clearCanvas();
+            const { countDis, allDotsX } = generatePaperData();
+
+            // 绘制全部小黑点
+            ctx.fillStyle = "#000";
+            allDotsX.forEach(x => {
+                ctx.beginPath();
+                ctx.arc(x, baseY, dotR, 0, Math.PI * 2);
+                ctx.fill();
+            })
+
+            // 标出计数点（加粗外圈区分）+标注两段距离
+            ctx.strokeStyle = "#d62828";
+            ctx.lineWidth = 2;
+            ctx.fillStyle = "#d62828";
+            ctx.font = "16px SimHei";
+            const countPointIndex = [0, 5, 10, 15, 20, 25, 30]; // 每5个点一个计数点
+            for (let i = 0; i < countDis.length; i++) {
+                const leftX = allDotsX[countPointIndex[i]];
+                const rightX = allDotsX[countPointIndex[i + 1]];
+                const midX = (leftX + rightX) / 2;
+
+                // 计数点画红圈标记
+                ctx.beginPath();
+                ctx.arc(leftX, baseY, dotR + 3, 0, Math.PI * 2);
+                ctx.stroke();
+                // 尺寸文字（数值还是真实mm数值，不受缩放影响）
+                ctx.fillText(countDis[i] + " mm", midX - 18, baseY - 15);
+                // 上下短竖线
+                ctx.beginPath();
+                ctx.moveTo(leftX, baseY - 10);
+                ctx.lineTo(leftX, baseY + 10);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(rightX, baseY - 10);
+                ctx.lineTo(rightX, baseY + 10);
+                ctx.stroke();
+            }
+            // 最后一个计数点外圈
+            const lastCP = allDotsX[countPointIndex[6]];
+            ctx.beginPath();
+            ctx.arc(lastCP, baseY, dotR + 3, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 逐差法计算加速度（计算使用原始真实毫米数据，缩放只改画图，计算完全不变）
+            const [x1, x2, x3, x4, x5, x6] = countDis;
+            const sumAfter = x4 + x5 + x6;
+            const sumBefore = x1 + x2 + x3;
+            const deltaSum = sumAfter - sumBefore;
+            const a = (deltaSum / 1000) / (9 * countPeriod ** 2);
+
+            let html = `
+                <span class="blue-text">计数点间隔时间 T = 0.1 s</span><br>
+                六组计数段长度：x₁=${x1}mm，x₂=${x2}mm，x₃=${x3}mm，x₄=${x4}mm，x₅=${x5}mm，x₆=${x6}mm<br>
+                逐差公式：a = [(x₄+x₅+x₆) − (x₁+x₂+x₃)] ÷ (9T²)<br>
+                上段总和：${sumAfter.toFixed(2)} mm　下段总和：${sumBefore.toFixed(2)} mm　差值：${deltaSum.toFixed(2)} mm<br>
+                计算得出加速度：<span class="red-text">${a.toFixed(3)} m/s²</span>
+            `;
+            resultBox.innerHTML = html;
+        }
+
+        document.getElementById("genBtn").addEventListener("click", drawPaper);
+        document.getElementById("clearBtn").addEventListener("click", clearCanvas);
+        window.onload = clearCanvas;
+    </script>
+</body>
+</html>

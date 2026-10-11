@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交互式 Venn 图演示</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background-color: #e0e0e0;
+        }
+
+        button.active {
+            color: white;
+            border-color: transparent;
+        }
+
+        .size-controls {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            background: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .size-controls label {
+            font-size: 14px;
+            color: #555;
+        }
+
+        #canvas-container {
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            border-radius: 50%;
+            background: #fff;
+        }
+
+        canvas {
+            display: block;
+            border-radius: 50%;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #666;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Venn 图集合运算演示</h2>
+
+    <div class="controls">
+        <button id="btn-none" onclick="setMode('none')" class="active">无填充</button>
+        <button id="btn-inter" onclick="setMode('intersection')">交集 (A ∩ B) - 红色</button>
+        <button id="btn-union" onclick="setMode('union')">并集 (A ∪ B) - 蓝色</button>
+        <button id="btn-compA" onclick="setMode('compA')">A 的补集 (A') - 橙色</button>
+        <button id="btn-compB" onclick="setMode('compB')">B 的补集 (B') - 绿色</button>
+        <button id="btn-diffA" onclick="setMode('diffA')">差集 (A \ B) - 紫色</button>
+    </div>
+
+    <div class="size-controls">
+        <div>
+            <label for="sizeA">集合 A 半径: </label>
+            <input type="range" id="sizeA" min="40" max="180" value="100">
+        </div>
+        <div>
+            <label for="sizeB">集合 B 半径: </label>
+            <input type="range" id="sizeB" min="40" max="180" value="100">
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="vennCanvas" width="500" height="500"></canvas>
+    </div>
+
+    <div class="instructions">
+        💡 提示：按住鼠标**左键**在圆内拖拽可移动圆 A 和圆 B。<br>
+        外部的大虚线圆代表**全集 U**。
+    </div>
+
+    <script>
+        const canvas = document.getElementById('vennCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 全集 U 参数 (外层无颜色大圆)
+        const U = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            r: 240
+        };
+
+        // 集合 A 与 B
+        const circleA = { x: 180, y: 250, r: 100, name: 'A' };
+        const circleB = { x: 320, y: 250, r: 100, name: 'B' };
+
+        // 颜色定义
+        const COLORS = {
+            intersection: 'rgba(255, 77, 79, 0.7)',  // 红色 (交集)
+            union: 'rgba(24, 144, 255, 0.7)',        // 蓝色 (并集)
+            compA: 'rgba(250, 140, 22, 0.6)',        // 橙色 (A的补集)
+            compB: 'rgba(82, 196, 26, 0.6)',         // 绿色 (B的补集)
+            diffA: 'rgba(114, 46, 209, 0.6)'         // 紫色 (差集 A-B)
+        };
+
+        let currentMode = 'none';
+        let isDragging = null; // 'A' 或 'B'
+        let dragOffset = { x: 0, y: 0 };
+
+        // 绑定滑块控制大小
+        document.getElementById('sizeA').addEventListener('input', (e) => {
+            circleA.r = parseInt(e.target.value);
+            draw();
+        });
+        document.getElementById('sizeB').addEventListener('input', (e) => {
+            circleB.r = parseInt(e.target.value);
+            draw();
+        });
+
+        // 切换模式
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.controls button').forEach(btn => btn.classList.remove('active'));
+            
+            const activeBtn = {
+                'none': 'btn-none',
+                'intersection': 'btn-inter',
+                'union': 'btn-union',
+                'compA': 'btn-compA',
+                'compB': 'btn-compB',
+                'diffA': 'btn-diffA'
+            }[mode];
+
+            if(activeBtn) {
+                const btnNode = document.getElementById(activeBtn);
+                btnNode.classList.add('active');
+            }
+            
+            draw();
+        }
+
+        // 绘制主流程
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. 绘制全集 U 边界 (无颜色的透明大圆)
+            ctx.beginPath();
+            ctx.arc(U.x, U.y, U.r, 0, Math.PI * 2);
+            ctx.strokeStyle = '#999';
+            ctx.setLineDash([6, 6]);
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.setLineDash([]); // 还原实线
+            
+            // 绘制 U 的标签
+            ctx.fillStyle = '#666';
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText('全集 U', 20, 30);
+
+            // 2. 绘制集合填充效果
+            drawRegions();
+
+            // 3. 绘制集合 A 和 B 的轮廓线与名称
+            drawCircleOutline(circleA, '#1890ff');
+            drawCircleOutline(circleB, '#52c41a');
+        }
+
+        // 绘制集合轮廓
+        function drawCircleOutline(c, color) {
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            // 绘制标签
+            ctx.fillStyle = color;
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText(c.name, c.x, c.y);
+        }
+
+        // 辅助绘制圆形路径
+        function pathCircle(c) {
+            ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+        }
+
+        // 核心：基于 Clip 和 路径复合 绘制集合区域
+        function drawRegions() {
+            if (currentMode === 'none') return;
+
+            ctx.save();
+
+            // 限制高亮区域只在全集 U 内部
+            ctx.beginPath();
+            pathCircle(U);
+            ctx.clip();
+
+            if (currentMode === 'intersection') {
+                // 交集：A ∩ B
+                ctx.fillStyle = COLORS.intersection;
+                ctx.beginPath();
+                pathCircle(circleA);
+                ctx.clip(); // 先裁切出 A
+                ctx.beginPath();
+                pathCircle(circleB);
+                ctx.fill(); // 再在 A 内部绘制 B
+
+            } else if (currentMode === 'union') {
+                // 并集：A ∪ B
+                ctx.fillStyle = COLORS.union;
+                ctx.beginPath();
+                pathCircle(circleA);
+                pathCircle(circleB);
+                ctx.fill();
+
+            } else if (currentMode === 'compA') {
+                // A 的补集：U \ A
+                ctx.fillStyle = COLORS.compA;
+                ctx.beginPath();
+                pathCircle(U);
+                pathCircle(circleA);
+                ctx.fill('evenodd'); // 奇偶填充剔除 A
+
+            } else if (currentMode === 'compB') {
+                // B 的补集：U \ B
+                ctx.fillStyle = COLORS.compB;
+                ctx.beginPath();
+                pathCircle(U);
+                pathCircle(circleB);
+                ctx.fill('evenodd'); // 奇偶填充剔除 B
+
+            } else if (currentMode === 'diffA') {
+                // 差集：A \ B
+                ctx.fillStyle = COLORS.diffA;
+                ctx.beginPath();
+                pathCircle(circleA);
+                ctx.clip(); // 先裁切出 A
+                
+                ctx.beginPath();
+                pathCircle(U);
+                pathCircle(circleB);
+                ctx.fill('evenodd'); // 填充全集排除 B 的部分
+            }
+
+            ctx.restore();
+        }
+
+        // --- 鼠标交互 (拖拽圆) ---
+
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        function isInside(pos, circle) {
+            const dx = pos.x - circle.x;
+            const dy = pos.y - circle.y;
+            return (dx * dx + dy * dy) <= (circle.r * circle.r);
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const pos = getMousePos(e);
+
+            // 优先检测后绘制/上面的圆或距离近的圆
+            if (isInside(pos, circleB)) {
+                isDragging = 'B';
+                dragOffset.x = pos.x - circleB.x;
+                dragOffset.y = pos.y - circleB.y;
+            } else if (isInside(pos, circleA)) {
+                isDragging = 'A';
+                dragOffset.x = pos.x - circleA.x;
+                dragOffset.y = pos.y - circleA.y;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(e);
+
+            // 改变鼠标手型
+            if (isInside(pos, circleA) || isInside(pos, circleB)) {
+                canvas.style.cursor = 'grab';
+            } else {
+                canvas.style.cursor = 'default';
+            }
+
+            if (!isDragging) return;
+
+            canvas.style.cursor = 'grabbing';
+
+            if (isDragging === 'A') {
+                circleA.x = pos.x - dragOffset.x;
+                circleA.y = pos.y - dragOffset.y;
+            } else if (isDragging === 'B') {
+                circleB.x = pos.x - dragOffset.x;
+                circleB.y = pos.y - dragOffset.y;
+            }
+
+            draw();
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = null;
+        });
+
+        // 首次初始化绘制
+        draw();
+    </script>
+</body>
+</html>
